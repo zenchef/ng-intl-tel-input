@@ -1,37 +1,42 @@
-(function (angular) {
+var libphonenumber = require("libphonenumber-js");
 
-  'use strict';
+(function(angular) {
+  "use strict";
 
-  var VALIDATOR_NAME = 'phoneNumber';
+  var VALIDATOR_NAME = "phoneNumber";
 
-  angular.module('betsol.intlTelInput', [])
+  angular
+    .module("betsol.intlTelInput", [])
 
-    .constant('intlTelInputOptions', {})
+    .constant("intlTelInputOptions", {})
 
-    .directive('intlTelInput', function (
-      intlTelInputOptions
-    ) {
+    .directive("intlTelInput", function(intlTelInputOptions) {
       return {
-        restrict: 'AC',
-        require: 'ngModel',
+        restrict: "AC",
+        require: "ngModel",
         scope: {
-          intlTelInputOptions: '=?',
-          intlTelInputController: '=?'
+          intlTelInputOptions: "=?",
+          intlTelInputController: "=?"
         },
-        link: function link ($scope, $element, attrs, modelCtrl) {
-
+        link: function link($scope, $element, attrs, modelCtrl) {
           /**
            * Obtaining reference to the plugin API
            * and making sure it's present.
            */
           var pluginApi = $element.intlTelInput;
           if (!pluginApi) {
-            log('intl-tel-input jQuery plugin must be loaded, skipping directive initialization');
+            log(
+              "intl-tel-input jQuery plugin must be loaded, skipping directive initialization"
+            );
             return;
           }
 
           // Building options for this control.
-          var options = angular.extend({}, $scope.intlTelInputOptions || {}, intlTelInputOptions);
+          var options = angular.extend(
+            {},
+            $scope.intlTelInputOptions || {},
+            intlTelInputOptions
+          );
 
           // Using this flag in order to determine if we are in the control's rendering phase or not.
           // This is required for country change event right now.
@@ -47,18 +52,21 @@
           /**
            * Updating the control's view when model changes.
            */
-          modelCtrl.$render = function () {
+          modelCtrl.$render = function() {
             renderingView = true;
-            callApi('setNumber', modelCtrl.$viewValue || '');
+            callApi("setNumber", modelCtrl.$viewValue || "");
             renderingView = false;
           };
 
           /**
            * Validating the input using plugin's API.
            */
-          if ('undefined' !== typeof modelCtrl.$validators) {
+          if ("undefined" !== typeof modelCtrl.$validators) {
             // Using newer `$validators` API.
-            modelCtrl.$validators[VALIDATOR_NAME] = function (modelValue, viewValue) {
+            modelCtrl.$validators[VALIDATOR_NAME] = function(
+              modelValue,
+              viewValue
+            ) {
               if (!modelValue && !viewValue) {
                 return true;
               }
@@ -68,7 +76,7 @@
             // Using legacy validation approach.
             // This is required for Angular v1.2.x.
             // @todo: deprecate this in the future!
-            var validateValue = function (value) {
+            var validateValue = function(value) {
               if (!value) {
                 return value;
               }
@@ -83,8 +91,8 @@
           /**
            * Destroying the plugin with the directive.
            */
-          $scope.$on('$destroy', function () {
-            callApi('destroy');
+          $scope.$on("$destroy", function() {
+            callApi("destroy");
           });
 
           /**
@@ -96,8 +104,8 @@
            * instead of the default .val() of the underlying input field.
            */
           var $setViewValue = modelCtrl.$setViewValue;
-          modelCtrl.$setViewValue = function () {
-            arguments[0] = callApi('getNumber');
+          modelCtrl.$setViewValue = function() {
+            arguments[0] = callApi("getNumber");
             $setViewValue.apply(modelCtrl, arguments);
           };
 
@@ -110,52 +118,51 @@
            *
            * Using two event names for both latest and legacy versions of the plugin.
            */
-          $element.bind('country-change countrychange', function () {
+          $element.bind("country-change countrychange", function() {
             if (!renderingView && !settingCountry) {
               // It was changed by the user, so we need to update the model value.
-              updateViewValue('countrychange');
+              updateViewValue("countrychange");
             }
           });
 
           $scope.intlTelInputController = {};
 
-          $scope.intlTelInputController.setCountry = function (countryName) {
+          $scope.intlTelInputController.setCountry = function(countryName) {
             settingCountry = true;
-            callApi('setCountry', countryName);
+            callApi("setCountry", countryName);
             updateViewValue();
             settingCountry = false;
           };
 
-          $scope.intlTelInputController.getExtension = function () {
-            return callApi('getExtension');
+          $scope.intlTelInputController.getExtension = function() {
+            return callApi("getExtension");
           };
 
-          $scope.intlTelInputController.getNumber = function () {
-            return callApiWithArguments('getNumber', arguments);
+          $scope.intlTelInputController.getNumber = function() {
+            return callApiWithArguments("getNumber", arguments);
           };
 
-          $scope.intlTelInputController.getNumberType = function () {
-            return callApi('getNumberType');
+          $scope.intlTelInputController.getNumberType = function() {
+            return callApi("getNumberType");
           };
 
-          $scope.intlTelInputController.getSelectedCountryData = function () {
-            return callApi('getSelectedCountryData');
+          $scope.intlTelInputController.getSelectedCountryData = function() {
+            return callApi("getSelectedCountryData");
           };
 
-
-          function callApi () {
+          function callApi() {
             return pluginApi.apply($element, arguments);
           }
 
-          function callApiWithArguments (method, args) {
+          function callApiWithArguments(method, args) {
             var callArgs = Array.prototype.slice.call(args);
             callArgs.unshift(method);
             return callApi.apply(null, callArgs);
           }
 
-          function updateViewValue (trigger) {
-            $scope.$evalAsync(function () {
-              modelCtrl.$setViewValue('', trigger);
+          function updateViewValue(trigger) {
+            $scope.$evalAsync(function() {
+              modelCtrl.$setViewValue("", trigger);
             });
           }
 
@@ -167,28 +174,24 @@
            *
            * @returns {boolean}
            */
-          function isValidInput (value) {
-            var useWorkaround = ('undefined' !== typeof value);
+          function isValidInput(value) {
+            var useWorkaround = "undefined" !== typeof value;
             if (useWorkaround) {
               var previousValue = $element.val();
               $element.val(value);
             }
-            var result = callApi('isValidNumber');
+            var result = libphonenumber.isValidNumber(callApi('getNumber'));
+
             if (useWorkaround) {
               $element.val(previousValue);
             }
             return result;
           }
-
         }
       };
-    })
+    });
 
-  ;
-
-
-  function log (message) {
-    console.log('ng-intl-tel-input: ' + message);
+  function log(message) {
+    console.log("ng-intl-tel-input: " + message);
   }
-
 })(angular);
